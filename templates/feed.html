@@ -1,175 +1,37 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ item.title if item else 'Лента' }}</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    /* Фикс разметки для полноэкранного режима */
-    .mobile-container {
-      position: relative;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      overflow: hidden;
-      background-color: #0f172a;
-    }
+{% extends "base.html" %}
+{% from "_macros.html" import media, heart %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block screen_class %}screen-feed{% endblock %}
+{% block content %}
+  {# если у галактики своё видео — показываем его, иначе фото #}
+  {% if item.video_key and item.video_key != DEFAULT_VIDEO %}
+    {{ media(item.video_key, DEFAULT_VIDEO, 'feed-media') }}
+  {% else %}
+    {{ media(item.image_key, 'default.jpg', 'feed-media') }}
+  {% endif %}
+  <div class="feed-shade"></div>
 
-    .feed-card {
-      position: relative;
-      width: 100%;
-      height: calc(100vh - 60px); /* Вся высота за вычетом нижнего меню */
-      overflow: hidden;
-    }
+  <aside class="feed-side">
+    <span class="side-btn">{{ heart() }}</span>
+    <span class="side-value">{{ item.likes }}</span>
 
-    .feed-media {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover; /* Заполняет всё пространство без искажений */
-      z-index: 1;
-    }
-
-    /* Градиентное наложение поверх картинки для читаемости текста */
-    .feed-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      top: 0;
-      z-index: 2;
-      background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(15, 23, 42, 0.95) 90%);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    .feed-info {
-      max-width: 75%;
-      color: #ffffff;
-    }
-
-    .feed-info h2 {
-      margin: 0 0 6px 0;
-      font-size: 22px;
-      color: #ffffff !important;
-    }
-
-    .feed-info p {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-      color: #cbd5e1 !important;
-      line-height: 1.3;
-    }
-
-    .feed-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 12px;
-      color: #94a3b8 !important;
-    }
-
-    /* Блок экшенов (Лайк + Следующий) */
-    .feed-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .like-button, .next-button {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(30, 41, 59, 0.8);
-      backdrop-filter: blur(4px);
-      color: #ffffff;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      text-decoration: none;
-      font-size: 18px;
-    }
-
-    .like-button span {
-      font-size: 10px;
-      margin-top: 2px;
-    }
-
-    .bottom-nav {
-      height: 60px;
-      background: #0f172a;
-      z-index: 10;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="mobile-container">
-    <div class="feed-card">
-      
-      <!-- Полноэкранное изображение -->
-      <img src="{{ item.media_url }}" alt="{{ item.title }}" class="feed-media">
-
-      <!-- Контент поверх изображения -->
-      <div class="feed-overlay">
-        <div class="feed-info">
-          <h2>{{ item.title }}</h2>
-          <p>{{ item.description }}</p>
-          <div class="feed-meta">
-            <span>{{ item.distance_mpc }} Мпк</span>
-            <span>m = {{ item.magnitude }}</span>
-          </div>
-        </div>
-
-        <!-- Кнопка лайков и переключатель -->
-        <div class="feed-actions">
-            <form action="/feed/{{ item.id }}/like" method="post" style="margin:0;">
-                <button type="submit" class="like-button" style="border:none; cursor:pointer;">
-                {{ '♥' if item.is_liked else '♡' }}
-                <span>{{ item.likes_users | length if item.likes_users else 0 }}</span>
-                </button>
-            </form>
-            
-            <a href="/feed/{{ item.id }}?next=true" class="next-button" title="Следующая">➔</a>
-        </div>
-      </div>
-
+    <div class="param">
+      <span class="side-value">{{ fmt(item.magnitude) }}<small>m</small></span>
+      <span class="param-label">видимая<br>величина</span>
+    </div>
+    <div class="param">
+      <span class="side-value">{{ fmt(item.distance_mpc) }}</span>
+      <span class="param-label">Мпк</span>
     </div>
 
-    <!-- Нижняя навигация -->
-    <nav class="bottom-nav">
-      <a href="/feed/1" class="nav-item active">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-      </a>
-      
-      <a href="/draft" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </a>
-      
-      <a href="/" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"/>
-          <rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/>
-          <rect x="3" y="14" width="7" height="7"/>
-        </svg>
-      </a>
-    </nav>
-  </div>
+    <a class="side-btn side-next" href="/feed/{{ item.id }}/next" aria-label="Следующая галактика">
+      <svg viewBox="0 0 24 24"><path d="m10 7 5 5-5 5"/></svg>
+    </a>
+  </aside>
 
-</body>
-</html>
+  <div class="feed-info">
+    <h1 class="feed-title">Галактика {{ item.title }}</h1>
+    {% if item.description %}<p class="feed-text">{{ item.description }}</p>{% endif %}
+    <span class="chip">Сверхновая {{ item.supernova }}</span>
+  </div>
+{% endblock %}
