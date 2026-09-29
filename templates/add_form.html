@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_macros.html" import media %}
+{% block title %}Черновик{% endblock %}
+{% block content %}
+  <h1 class="page-title">Регистрация сверхновой</h1>
+
+  {# фото и видео уже выбраны на шаге «Далее» — здесь только показываем #}
+  <div class="group">
+    <span class="label">Фото</span>
+    <div class="preview">{{ media(draft.image_key, 'default.jpg', 'preview-media') }}</div>
+  </div>
+  <div class="group">
+    <span class="label">Видео</span>
+    <div class="preview">{{ media(draft.video_key, DEFAULT_VIDEO, 'preview-media') }}</div>
+  </div>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <form class="form" action="/add/publish" method="post">
+    <label class="group"><span class="label">Название</span>
+      <input class="field" name="title" maxlength="100" required value="{{ form.title or '' }}" placeholder="NGC 1300">
+    </label>
+    <label class="group"><span class="label">ID сверхновой</span>
+      <input class="field" name="supernova" maxlength="30" required value="{{ form.supernova or '' }}" placeholder="SN 2002fk">
+    </label>
+    <div class="row">
+      <label class="group"><span class="label">Видимая величина, m</span>
+        <input class="field" name="magnitude" type="number" step="0.01" required value="{{ form.magnitude or '' }}" placeholder="12.8">
+      </label>
+      <label class="group"><span class="label">Расстояние, Мпк</span>
+        <input class="field" name="distance_mpc" type="number" step="0.01" min="0.01" required value="{{ form.distance_mpc or '' }}" placeholder="18.5">
+      </label>
+    </div>
+    <label class="group"><span class="label">Описание <em>(необязательно)</em></span>
+      <textarea class="field" name="description" rows="3" placeholder="Спиральная галактика с перемычкой">{{ form.description or '' }}</textarea>
+    </label>
+    <button class="btn" type="submit">Опубликовать</button>
+  </form>
+
+  <form class="form form-tight" action="/delete/{{ draft.id }}" method="post">
+    <input type="hidden" name="back" value="/add">
+    <button class="btn" type="submit">Удалить черновик</button>
+  </form>
+{% endblock %}

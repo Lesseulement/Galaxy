@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import media %}
+{% block title %}Новая галактика{% endblock %}
+{% block content %}
+  <h1 class="page-title">Регистрация сверхновой</h1>
+  <p class="hint">Черновика нет. Выберите фото и видео из хранилища MinIO или загрузите свои, затем нажмите «Далее».</p>
+
+  <form class="form" action="/add/next" method="post" enctype="multipart/form-data" data-media-base="{{ media_base}}">
+    <div class="group">
+      <span class="label">Фото</span>
+      <div class="preview" id="imagePreview">{{ media(default_image, default_image, 'preview-media') }}</div>
+      <select class="field" name="image_key" id="imageSelect">
+        {% for key in images %}<option value="{{ key }}" {{ 'selected' if key == default_image }}>{{ key }}</option>{% endfor %}
+      </select>
+      <label class="file">или загрузить файл<input type="file" name="image_file" accept="image/*"></label>
+    </div>
+
+    <div class="group">
+      <span class="label">Видео</span>
+      <div class="preview" id="videoPreview">{{ media(default_video, default_video, 'preview-media') }}</div>
+      <select class="field" name="video_key" id="videoSelect">
+        {% for key in videos %}<option value="{{ key }}" {{ 'selected' if key == default_video }}>{{ key }}</option>{% endfor %}
+      </select>
+      <label class="file">или загрузить файл<input type="file" name="video_file" accept="video/*,image/gif"></label>
+    </div>
+
+    <button class="btn" type="submit">Далее</button>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const BASE = document.querySelector('.form').dataset.mediaBase;
+  const isVideo = k => /\.(mp4|webm|mov)$/i.test(k);
+  function tag(src, video) {
+    return video
+      ? `<video class="preview-media" src="${src}" autoplay muted loop playsinline></video>`
+      : `<img class="preview-media" src="${src}" alt="">`;
+  }
+  function bind(selectId, fileName, previewId) {
+    const select = document.getElementById(selectId);
+    const file = document.querySelector(`input[name="${fileName}"]`);
+    const preview = document.getElementById(previewId);
+    select.addEventListener('change', () => {
+      file.value = '';
+      preview.innerHTML = tag(BASE + encodeURIComponent(select.value), isVideo(select.value));
+    });
+    file.addEventListener('change', () => {
+      const f = file.files[0];
+      if (f) preview.innerHTML = tag(URL.createObjectURL(f), f.type.startsWith('video/'));
+    });
+  }
+  bind('imageSelect', 'image_file', 'imagePreview');
+  bind('videoSelect', 'video_file', 'videoPreview');
+</script>
+{% endblock %}

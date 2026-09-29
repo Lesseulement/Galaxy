@@ -1,48 +1,59 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>База галактик</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
+{% extends "base.html" %}
+{% from "_macros.html" import media, heart %}
+{% block title %}База галактик{% endblock %}
+{% block content %}
+  <h1 class="page-title">База галактик</h1>
 
-  <div class="mobile-container">
-    <div class="content grid-padding">
-      
-      <div class="title">База галактик</div>
+  <form class="filters" action="/" method="get">
+    <input class="field" type="text" name="search" value="{{ search }}" placeholder="Поиск по названию галактики">
 
-      <div class="search-box">
-        <input type="text" placeholder="Поиск по названию галактики">
+    <div class="range">
+      <div class="range-head">
+        <span>Расстояние, Мпк</span>
+        <span class="range-values"><output id="minOut">{{ fmt(dist_min) }}</output> – <output id="maxOut">{{ fmt(dist_max) }}</output></span>
       </div>
-
-      <div class="grid-container">
-        {% for item in items %}
-        <a href="/feed/{{ item.id }}" class="card" style="background-image: url('{{ item.media_url }}');">
-          <div class="card-overlay">
-            <div class="card-title">{{ item.title }}</div>
-            <div class="card-likes">♡ {{ item.likes_count }}k</div>
-          </div>
-        </a>
-        {% endfor %}
-      </div>
-
+      <label class="range-row">от
+        <input type="range" name="dist_min" id="distMin" min="0" max="{{ slider_max }}" step="0.5" value="{{ dist_min }}">
+      </label>
+      <label class="range-row">до
+        <input type="range" name="dist_max" id="distMax" min="0" max="{{ slider_max }}" step="0.5" value="{{ dist_max }}">
+      </label>
     </div>
 
-    <!-- Навигация -->
-    <nav class="bottom-nav">
-      <a href="/feed/1" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      </a>
-      <a href="/draft" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </a>
-      <a href="/" class="nav-item active">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      </a>
-    </nav>
-  </div>
+    <button class="btn" type="submit">Найти</button>
+  </form>
 
-</body>
-</html>
+  {% if items %}
+  <div class="tiles">
+    {% for item in items %}
+    <article class="tile">
+      <a class="tile-link" href="/feed/{{ item.id }}">
+        {{ media(item.image_key, 'default.jpg', 'tile-img') }}
+        <h2 class="tile-title">{{ item.title }}</h2>
+        <div class="tile-meta">{{ fmt(item.distance_mpc) }} Мпк</div>
+        <div class="tile-likes">{{ heart() }}<span>{{ item.likes | length }}</span></div>
+      </a>
+      <form action="/delete/{{ item.id }}" method="post">
+        <input type="hidden" name="back" value="/">
+        <button class="btn btn-small" type="submit">Удалить</button>
+      </form>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="empty">Ничего не найдено. Попробуйте изменить фильтр.</p>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // показываем значения слайдеров, пока их двигают
+  const minEl = document.getElementById('distMin'), maxEl = document.getElementById('distMax');
+  const show = () => {
+    document.getElementById('minOut').textContent = minEl.value;
+    document.getElementById('maxOut').textContent = maxEl.value;
+  };
+  minEl.addEventListener('input', show);
+  maxEl.addEventListener('input', show);
+</script>
+{% endblock %}
