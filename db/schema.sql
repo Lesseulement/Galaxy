@@ -10,26 +10,27 @@ CREATE TYPE service_status AS ENUM ('draft', 'published', 'deleted');
 -- 1. Пользователи
 CREATE TABLE users (
     id       SERIAL      PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE
+    username      VARCHAR(50)  NOT NULL UNIQUE,
+    password_hash VARCHAR(255)            -- хэш пароля (заполняется при регистрации)
 );
 
-
+-- 2. Услуги = галактики со сверхновой типа Ia
 CREATE TABLE galaxy_services (
     id           SERIAL         PRIMARY KEY,
 
-    -- Заполняются кнопкой «Далее», обязательные
-    image_key    VARCHAR(255)   NOT NULL DEFAULT 'default.jpg',  
-    video_key    VARCHAR(255)   NOT NULL DEFAULT 'default.mp4',  
+    -- Заполняются кнопкой «Далее» -> ОБЯЗАТЕЛЬНЫЕ
+    image_key    VARCHAR(255)   NOT NULL DEFAULT 'default.jpg',  -- ключ фото в MinIO
+    video_key    VARCHAR(255)   NOT NULL DEFAULT 'default.mp4',  -- ключ видео в MinIO
     status       service_status NOT NULL DEFAULT 'draft',
     created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creator_id   INT            NOT NULL,
 
-    -- Заполняются после «Далее», необязательные
+    -- Заполняются после «Далее» -> НЕОБЯЗАТЕЛЬНЫЕ (NULL, пока черновик)
     title        VARCHAR(100),
     description  TEXT,
-    supernova    VARCHAR(30),     
-    magnitude    NUMERIC(5,2),    
-    distance_mpc NUMERIC(8,2),    
+    supernova    VARCHAR(30),     -- обозначение сверхновой, напр. SN 2014J
+    magnitude    NUMERIC(5,2),    -- видимая звёздная величина сверхновой, m
+    distance_mpc NUMERIC(8,2),    -- расстояние до галактики, Мпк
 
     CONSTRAINT fk_service_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE RESTRICT,
 
@@ -71,21 +72,19 @@ INSERT INTO galaxy_services
     (title, description, supernova, magnitude, distance_mpc, image_key, video_key, status, created_at, creator_id)
 VALUES
     ('NGC 1300', 'Спиральная галактика с перемычкой в созвездии Эридан', 'SN 2002fk', 12.80, 18.50,
-        'NGC 1300.jpg', 'default.mp4', 'published', '2026-09-01 10:00:00', 1),
+        'ngc1300.jpg', 'default.mp4', 'published', '2026-09-01 10:00:00', 1),
     ('M 82 (Сигара)', 'Галактика со вспышкой звездообразования в Большой Медведице', 'SN 2014J', 10.50, 3.50,
-        'M 82 (Сигара).jpg', 'default.mp4', 'published', '2026-09-01 10:05:00', 1),
+        'm82.jpg', 'default.mp4', 'published', '2026-09-01 10:05:00', 1),
     ('NGC 4527', 'Спиральная галактика в созвездии Девы', 'SN 1991T', 11.50, 13.00,
-        'NGC 4527.jpg', 'default.mp4', 'published', '2026-09-01 10:10:00', 1),
+        'ngc4527.jpg', 'default.mp4', 'published', '2026-09-01 10:10:00', 1),
     ('NGC 5128 (Центавр A)', 'Линзовидная галактика, мощный радиоисточник', 'SN 1986G', 11.40, 3.80,
-        'NGC 5128 (Центавр A).gif', 'default.mp4', 'published', '2026-09-01 10:15:00', 1),
+        'ngc5128.gif', 'default.mp4', 'published', '2026-09-01 10:15:00', 1),
     ('NGC 3982', 'Спиральная галактика в Большой Медведице', 'SN 1998aq', 12.30, 20.00,
-        'NGC 3982.gif', 'default.mp4', 'published', '2026-09-01 10:20:00', 1),
+        'ngc3982.gif', 'default.mp4', 'published', '2026-09-01 10:20:00', 2),
     ('M 31 (Андромеда)', 'Ближайшая крупная спиральная галактика', 'SN 1885A', 5.90, 0.78,
-        'M 31 (Андромеда).jpg', 'default.mp4', 'deleted', '2026-09-01 10:25:00', 1);
+        'm31.jpg', 'default.mp4', 'deleted', '2026-09-01 10:25:00', 1);
 
--- Черновик: заполнено только то, что задаётся кнопкой «Далее»
-INSERT INTO galaxy_services (image_key, video_key, status, creator_id)
-VALUES ('NGC 1300_1.jpg', 'default.mp4', 'draft', 1);
+-- Черновика в начальных данных нет: его создаёт метод POST /api/galaxies
 
 -- Лайки
 INSERT INTO galaxy_likes (user_id, service_id) VALUES

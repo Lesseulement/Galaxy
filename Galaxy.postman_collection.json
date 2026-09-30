@@ -1,0 +1,130 @@
+{
+  "info": {
+    "name": "Galaxy API (ЛР3)",
+    "description": "Веб-сервис: определение расстояния до галактик по сверхновым типа Ia",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8001/api" }
+  ],
+  "item": [
+    {
+      "name": "Галактики",
+      "item": [
+        {
+          "name": "1. Список галактик (фильтр)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/galaxies?search=NGC&dist_min=5&dist_max=20",
+              "host": ["{{baseUrl}}"], "path": ["galaxies"],
+              "query": [
+                { "key": "search", "value": "NGC" },
+                { "key": "dist_min", "value": "5" },
+                { "key": "dist_max", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Добавить галактику (фото + видео)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "NGC 1309", "type": "text" },
+                { "key": "supernova", "value": "SN 2002fk", "type": "text" },
+                { "key": "magnitude", "value": "13.2", "type": "text" },
+                { "key": "distance_mpc", "value": "29.4", "type": "text" },
+                { "key": "description", "value": "Спиральная галактика в созвездии Эридан", "type": "text" },
+                { "key": "image", "type": "file", "src": [] },
+                { "key": "video", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/galaxies", "host": ["{{baseUrl}}"], "path": ["galaxies"] }
+          }
+        },
+        {
+          "name": "3. Черновик пользователя",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/galaxies/draft", "host": ["{{baseUrl}}"], "path": ["galaxies", "draft"] }
+          }
+        },
+        {
+          "name": "4. Опубликовать черновик",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/galaxies/draft/publish", "host": ["{{baseUrl}}"], "path": ["galaxies", "draft", "publish"] }
+          }
+        },
+        {
+          "name": "5. Лента (без id)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/galaxies/feed", "host": ["{{baseUrl}}"], "path": ["galaxies", "feed"] }
+          }
+        },
+        {
+          "name": "6. Лента: следующая после id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/galaxies/feed?id=1&next=true",
+              "host": ["{{baseUrl}}"], "path": ["galaxies", "feed"],
+              "query": [
+                { "key": "id", "value": "1" },
+                { "key": "next", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Лайк",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"like\": 1\n}" },
+            "url": { "raw": "{{baseUrl}}/galaxies/2/like", "host": ["{{baseUrl}}"], "path": ["galaxies", "2", "like"] }
+          }
+        },
+        {
+          "name": "8. Удалить галактику",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/galaxies/3", "host": ["{{baseUrl}}"], "path": ["galaxies", "3"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Пользователи",
+      "item": [
+        {
+          "name": "9. Регистрация",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"new_astronomer\",\n  \"password\": \"secret123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/users/register", "host": ["{{baseUrl}}"], "path": ["users", "register"] }
+          }
+        },
+        {
+          "name": "10. Аутентификация (заглушка)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/users/login", "host": ["{{baseUrl}}"], "path": ["users", "login"] }
+          }
+        },
+        {
+          "name": "11. Деавторизация (заглушка)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/users/logout", "host": ["{{baseUrl}}"], "path": ["users", "logout"] }
+          }
+        }
+      ]
+    }
+  ]
+}
