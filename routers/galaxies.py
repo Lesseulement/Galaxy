@@ -1,4 +1,4 @@
-"""Домен услуги: галактики со сверхновыми типа Ia."""
+"""Домен услуги: галактики со сверхновыми типа Ia (7 методов)."""
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
@@ -7,20 +7,20 @@ from sqlalchemy.orm import Session, selectinload
 import storage
 from database import get_db
 from deps import current_user_id
-from models import GalaxyLike, GalaxyService
-from schemas import GalaxyOut, LikeIn, LikeOut
+from models import Galaxy, GalaxyLike
+from schemas import GalaxyOut, LikeIn, LikeOut, PublishIn
 
 router = APIRouter(prefix="/galaxies", tags=["Галактики"])
 
 
-def to_out(g: GalaxyService, uid: int) -> GalaxyOut:
+def to_out(g: Galaxy, uid: int) -> GalaxyOut:
     return GalaxyOut(
         id=g.id,
         title=g.title,
-        description=g.description,
         supernova=g.supernova,
-        magnitude=g.magnitude,
+        apparent_magnitude=g.apparent_magnitude,
         distance_mpc=g.distance_mpc,
+        description=g.description,
         image_url=storage.media_url(g.image_key, storage.DEFAULT_IMAGE),
         video_url=storage.media_url(g.video_key, storage.DEFAULT_VIDEO),
         likes_count=len(g.likes),
@@ -30,41 +30,38 @@ def to_out(g: GalaxyService, uid: int) -> GalaxyOut:
 
 
 def published(db: Session):
-    return (
-        db.query(GalaxyService)
-        .options(selectinload(GalaxyService.likes))
-        .filter(GalaxyService.status == "published")
-    )
+    return db.query(Galaxy).options(selectinload(Galaxy.likes)).filter(Galaxy.status == "published")
 
 
-def get_draft(db: Session, uid: int) -> Optional[GalaxyService]:
+def get_draft(db: Session, uid: int) -> Optional[Galaxy]:
     return (
-        db.query(GalaxyService)
-        .options(selectinload(GalaxyService.likes))
-        .filter(GalaxyService.creator_id == uid, GalaxyService.status == "draft")
+        db.query(Galaxy)
+        .options(selectinload(Galaxy.likes))
+        .filter(Galaxy.creator_id == uid, Galaxy.status == "draft")
         .first()
     )
 
 
+# 1. Плитка: список опубликованных с фильтрацией по видимой звёздной величине
 @router.get("", response_model=List[GalaxyOut])
 def list_galaxies(
-    search: Optional[str] = None,
-    dist_min: Optional[float] = None,
-    dist_max: Optional[float] = None,
+    magnitude_from: Optional[float] = None,
+    magnitude_to: Optional[float] = None,
+    title: Optional[str] = None,
     db: Session = Depends(get_db),
     uid: int = Depends(current_user_id),
 ):
-    """Список опубликованных галактик с фильтрацией по названию и расстоянию."""
     query = published(db)
-    if search:
-        query = query.filter(GalaxyService.title.ilike(f"%{search.strip()}%"))
-    if dist_min is not None:
-        query = query.filter(GalaxyService.distance_mpc >= dist_min)
-    if dist_max is not None:
-        query = query.filter(GalaxyService.distance_mpc <= dist_max)
-    return [to_out(g, uid) for g in query.order_by(GalaxyService.id)]
+    if magnitude_from is not None:
+        query = query.filter(Galaxy.apparent_magnitude >= magnitude_from)
+    if magnitude_to is not None:
+        query = query.filter(Galaxy.apparent_magnitude <= magnitude_to)
+    if title:
+        query = query.filter(Galaxy.title.ilike(f"%{title.strip()}%"))
+    return [to_out(g, uid) for g in query.order_by(Galaxy.id)]
 
 
+# 2. Лента: без id — первая галактика; ?id=N — эта; ?id=N&next=true — следующая (по кругу)
 @router.get("/feed", response_model=GalaxyOut)
 def feed(
     item_id: Optional[int] = Query(None, alias="id"),
@@ -72,57 +69,47 @@ def feed(
     db: Session = Depends(get_db),
     uid: int = Depends(current_user_id),
 ):
-    """Лента: без id — первая галактика, с id — эта галактика,
-    с id и next=true — следующая после неё (по кругу)."""
-    query = published(db).order_by(GalaxyService.id)
+    query = published(db).order_by(Galaxy.id)
     if item_id is None:
         item = query.first()
     elif next_item:
-        item = query.filter(GalaxyService.id > item_id).first() or query.first()
+        item = query.filter(Galaxy.id > item_id).first() or query.first()
     else:
-        item = query.filter(GalaxyService.id == item_id).first()
+        item = query.filter(Galaxy.id == item_id).first()
     if item is None:
         raise HTTPException(status_code=404)
     return to_out(item, uid)
 
 
+# 3. Добавление: поля черновика текущего пользователя (не больше одного), id не указывается
 @router.get("/draft", response_model=GalaxyOut)
 def read_draft(db: Session = Depends(get_db), uid: int = Depends(current_user_id)):
-    """Черновик текущего пользователя (не больше одного), id не указывается."""
     draft = get_draft(db, uid)
     if draft is None:
         raise HTTPException(status_code=404)
     return to_out(draft, uid)
 
 
+# 4. Кнопка «Далее»: создаёт черновик — название, фото и видео (файлы в MinIO)
 @router.post("", response_model=GalaxyOut, status_code=201)
-def create_galaxy(
+def create_draft(
+    title: str = Form(..., min_length=1, max_length=100),
     image: UploadFile = File(...),
     video: UploadFile = File(...),
-    title: Optional[str] = Form(None),
-    description: Optional[str] = Form(None),
-    supernova: Optional[str] = Form(None),
-    magnitude: Optional[float] = Form(None),
-    distance_mpc: Optional[float] = Form(None),
     db: Session = Depends(get_db),
     uid: int = Depends(current_user_id),
 ):
-    """Добавление галактики: создаётся черновик, фото и видео — файлами в MinIO."""
     if get_draft(db, uid) is not None:
         raise HTTPException(status_code=409)  # черновик уже есть
+    if not title.strip():
+        raise HTTPException(status_code=400)
     if not (image.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400)
     if not (video.content_type or "").startswith("video/"):
         raise HTTPException(status_code=400)
-    if distance_mpc is not None and distance_mpc <= 0:
-        raise HTTPException(status_code=400)
 
-    draft = GalaxyService(
-        title=(title or "").strip() or None,
-        description=(description or "").strip() or None,
-        supernova=(supernova or "").strip() or None,
-        magnitude=magnitude,
-        distance_mpc=distance_mpc,
+    draft = Galaxy(
+        title=title.strip(),
         image_key=storage.upload(image, "image"),
         video_key=storage.upload(video, "video"),
         status="draft",
@@ -134,29 +121,26 @@ def create_galaxy(
     return to_out(draft, uid)
 
 
+# 5. Кнопка «Опубликовать»: сохраняет поля формы и меняет статус draft -> published
 @router.put("/draft/publish", response_model=GalaxyOut)
-def publish_draft(db: Session = Depends(get_db), uid: int = Depends(current_user_id)):
-    """Публикация черновика: смена статуса draft -> published.
-    Вернуть опубликованную галактику в черновик нельзя."""
+def publish_draft(body: PublishIn, db: Session = Depends(get_db), uid: int = Depends(current_user_id)):
     draft = get_draft(db, uid)
     if draft is None:
         raise HTTPException(status_code=404)
-    if not (draft.title and draft.supernova and draft.magnitude is not None and draft.distance_mpc is not None):
-        raise HTTPException(status_code=400)  # не заполнены обязательные поля
-    draft.status = "published"
+    draft.supernova = body.supernova.strip()
+    draft.apparent_magnitude = body.apparent_magnitude
+    draft.distance_mpc = body.distance_mpc
+    draft.description = (body.description or "").strip() or None
+    draft.status = "published"  # обратно в черновик вернуть нельзя
     db.commit()
     db.refresh(draft)
     return to_out(draft, uid)
 
 
+# 6. Кнопки «Удалить» (плитка) и «Удалить черновик»: мягкое удаление, только свои
 @router.delete("/{galaxy_id}")
 def delete_galaxy(galaxy_id: int, db: Session = Depends(get_db), uid: int = Depends(current_user_id)):
-    """Мягкое удаление (статус deleted). Удалять можно только свои галактики."""
-    galaxy = (
-        db.query(GalaxyService)
-        .filter(GalaxyService.id == galaxy_id, GalaxyService.status != "deleted")
-        .first()
-    )
+    galaxy = db.query(Galaxy).filter(Galaxy.id == galaxy_id, Galaxy.status != "deleted").first()
     if galaxy is None:
         raise HTTPException(status_code=404)
     if galaxy.creator_id != uid:
@@ -166,6 +150,7 @@ def delete_galaxy(galaxy_id: int, db: Session = Depends(get_db), uid: int = Depe
     return Response(status_code=200)
 
 
+# 7. Сердечко в ленте: like=1 ставит лайк, like=0 отменяет
 @router.post("/{galaxy_id}/like", response_model=LikeOut)
 def like_galaxy(
     galaxy_id: int,
@@ -173,21 +158,20 @@ def like_galaxy(
     db: Session = Depends(get_db),
     uid: int = Depends(current_user_id),
 ):
-    """Лайк от текущего пользователя: like=1 ставит, like=0 отменяет."""
-    galaxy = published(db).filter(GalaxyService.id == galaxy_id).first()
+    galaxy = published(db).filter(Galaxy.id == galaxy_id).first()
     if galaxy is None:
         raise HTTPException(status_code=404)
 
     existing = (
         db.query(GalaxyLike)
-        .filter(GalaxyLike.service_id == galaxy_id, GalaxyLike.user_id == uid)
+        .filter(GalaxyLike.galaxy_id == galaxy_id, GalaxyLike.user_id == uid)
         .first()
     )
     if body.like == 1 and existing is None:
-        db.add(GalaxyLike(service_id=galaxy_id, user_id=uid))
+        db.add(GalaxyLike(galaxy_id=galaxy_id, user_id=uid))
     elif body.like == 0 and existing is not None:
         db.delete(existing)
     db.commit()
 
-    count = db.query(GalaxyLike).filter(GalaxyLike.service_id == galaxy_id).count()
+    count = db.query(GalaxyLike).filter(GalaxyLike.galaxy_id == galaxy_id).count()
     return LikeOut(likes_count=count, is_liked=body.like)

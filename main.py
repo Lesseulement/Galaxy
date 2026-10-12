@@ -1,5 +1,5 @@
-"""ЛР3: веб-сервис (REST API) для приложения «Галактики».
-Без шаблонов: только JSON и коды ответа HTTP."""
+"""ЛР3: веб-сервис (REST API) приложения «Галактики».
+Шаблонов нет: сервис отдаёт только JSON и коды ответа HTTP. 10 методов."""
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response

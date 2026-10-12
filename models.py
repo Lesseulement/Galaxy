@@ -1,11 +1,11 @@
-"""ORM-модели. Таблицы и ограничения создаёт db/schema.sql."""
+"""ORM-модели. Таблицы и все ограничения создаёт db/01_schema.sql."""
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
 
 from database import Base
 
-ServiceStatus = ENUM("draft", "published", "deleted", name="service_status", create_type=False)
+GalaxyStatus = ENUM("draft", "published", "deleted", name="galaxy_status", create_type=False)
 
 
 class User(Base):
@@ -13,31 +13,37 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(50), nullable=False, unique=True)
-    password_hash = Column(String(255))
+    password_hash = Column(String(255), nullable=False)
 
-    services = relationship("GalaxyService", back_populates="creator")
+    galaxies = relationship("Galaxy", back_populates="creator")
     likes = relationship("GalaxyLike", back_populates="user")
 
 
-class GalaxyService(Base):
-    """Услуга = галактика со сверхновой типа Ia."""
-    __tablename__ = "galaxy_services"
+class Galaxy(Base):
+    """Услуга — галактика со сверхновой типа Ia."""
+    __tablename__ = "galaxies"
 
     id = Column(Integer, primary_key=True)
+
+    # кнопка «Далее» (POST) — обязательные
+    title = Column(String(100), nullable=False)
     image_key = Column(String(255), nullable=False, server_default="default.jpg")
     video_key = Column(String(255), nullable=False, server_default="default.mp4")
-    status = Column(ServiceStatus, nullable=False, server_default="draft")
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    # системные поля
+    status = Column(GalaxyStatus, nullable=False, server_default="draft")
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
-    title = Column(String(100))
-    description = Column(Text)
+    # кнопка «Опубликовать» (PUT)
     supernova = Column(String(30))
-    magnitude = Column(Numeric(5, 2, asdecimal=False))
-    distance_mpc = Column(Numeric(8, 2, asdecimal=False))
+    apparent_magnitude = Column(Numeric(5, 2, asdecimal=False))  # видимая звёздная величина, m
+    distance_mpc = Column(Numeric(8, 2, asdecimal=False))        # расстояние, Мпк
+    description = Column(Text)
 
-    creator = relationship("User", back_populates="services")
-    likes = relationship("GalaxyLike", back_populates="service")
+    creator = relationship("User", back_populates="galaxies")
+    likes = relationship("GalaxyLike", back_populates="galaxy")
 
 
 class GalaxyLike(Base):
@@ -45,7 +51,7 @@ class GalaxyLike(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    service_id = Column(Integer, ForeignKey("galaxy_services.id"), nullable=False)
+    galaxy_id = Column(Integer, ForeignKey("galaxies.id"), nullable=False)
 
     user = relationship("User", back_populates="likes")
-    service = relationship("GalaxyService", back_populates="likes")
+    galaxy = relationship("Galaxy", back_populates="likes")

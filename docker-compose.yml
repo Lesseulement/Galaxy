@@ -4,7 +4,7 @@ services:
     image: minio/minio:latest
     container_name: minio_galaxies
     ports:
-      - "9000:9000"   # API (отсюда браузер берёт картинки)
+      - "9000:9000"   # API (отсюда клиент берёт картинки)
       - "9001:9001"   # веб-консоль
     environment:
       MINIO_ROOT_USER: admin
@@ -24,7 +24,9 @@ services:
       POSTGRES_DB: galaxy_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      # выполняются по порядку имён при первом создании БД
+      - ./db/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/02_insert.sql:/docker-entrypoint-initdb.d/02_insert.sql:ro
 
   adminer:
     image: adminer

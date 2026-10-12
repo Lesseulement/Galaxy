@@ -1,4 +1,4 @@
-"""Домен пользователь: регистрация, аутентификация и деавторизация."""
+"""Домен пользователь: регистрация, аутентификация, деавторизация (3 метода)."""
 import hashlib
 import os
 
@@ -18,9 +18,9 @@ def hash_password(password: str) -> str:
     return f"{salt.hex()}${digest.hex()}"
 
 
+# 8. Регистрация. Пароль хранится только в виде хэша
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(body: UserIn, db: Session = Depends(get_db)):
-    """Регистрация нового пользователя. Пароль хранится только в виде хэша."""
     username = body.username.strip()
     if db.query(User).filter(User.username == username).first() is not None:
         raise HTTPException(status_code=409)  # логин занят
@@ -31,13 +31,13 @@ def register(body: UserIn, db: Session = Depends(get_db)):
     return UserOut(id=user.id, username=user.username)
 
 
+# 9. Аутентификация — заглушка, будет реализована в ЛР4
 @router.post("/login")
 def login():
-    """Аутентификация — заглушка, будет реализована в ЛР4."""
     return Response(status_code=200)
 
 
+# 10. Деавторизация — заглушка, будет реализована в ЛР4
 @router.post("/logout")
 def logout():
-    """Деавторизация — заглушка, будет реализована в ЛР4."""
     return Response(status_code=200)

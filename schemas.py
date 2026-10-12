@@ -1,8 +1,8 @@
 """Сериализаторы (Pydantic-схемы) запросов и ответов.
 
 Ответ по галактике всегда содержит один и тот же набор полей:
-если поле ещё не заполнено, оно приходит как null.
-Статус и системные поля наружу не отдаются и с клиента не принимаются.
+незаполненное поле приходит как null. Статус, создатель и даты
+наружу не отдаются и с клиента не принимаются.
 """
 from typing import Optional
 
@@ -11,19 +11,28 @@ from pydantic import BaseModel, Field
 
 class GalaxyOut(BaseModel):
     id: int
-    title: Optional[str]
-    description: Optional[str]
+    title: str
     supernova: Optional[str]
-    magnitude: Optional[float]
+    apparent_magnitude: Optional[float]
     distance_mpc: Optional[float]
+    description: Optional[str]
     image_url: str
     video_url: str
     likes_count: int
-    is_liked: int   
-    is_mine: int   
+    is_liked: int   # 0/1 — текущий пользователь поставил лайк
+    is_mine: int    # 0/1 — создатель совпадает с текущим пользователем
+
+
+class PublishIn(BaseModel):
+    """Поля, которые вводятся перед кнопкой «Опубликовать»."""
+    supernova: str = Field(min_length=1, max_length=30)
+    apparent_magnitude: float
+    distance_mpc: float = Field(gt=0)
+    description: Optional[str] = None
+
 
 class LikeIn(BaseModel):
-    like: int = Field(ge=0, le=1) 
+    like: int = Field(ge=0, le=1)  # 1 — поставить лайк, 0 — отменить
 
 
 class LikeOut(BaseModel):
