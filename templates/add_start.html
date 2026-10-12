@@ -3,9 +3,11 @@
 {% block title %}Новая галактика{% endblock %}
 {% block content %}
   <h1 class="page-title">Регистрация сверхновой</h1>
-  <p class="hint">Черновика нет. Выберите фото и видео из хранилища MinIO или загрузите свои, затем нажмите «Далее».</p>
+  <p class="hint">Черновика нет. Выберите фото и видео из хранилища MinIO или загрузите свои, введите название и нажмите «Далее».</p>
 
-  <form class="form" action="/add/next" method="post" enctype="multipart/form-data" data-media-base="{{ media_base}}">
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <form class="form" action="/add/next" method="post" enctype="multipart/form-data" data-media-base="{{ media_base }}">
     <div class="group">
       <span class="label">Фото</span>
       <div class="preview" id="imagePreview">{{ media(default_image, default_image, 'preview-media') }}</div>
@@ -23,6 +25,10 @@
       </select>
       <label class="file">или загрузить файл<input type="file" name="video_file" accept="video/*,image/gif"></label>
     </div>
+
+    <label class="group"><span class="label">Название</span>
+      <input class="field" name="title" maxlength="100" required value="{{ title }}" placeholder="NGC 1300">
+    </label>
 
     <button class="btn" type="submit">Далее</button>
   </form>

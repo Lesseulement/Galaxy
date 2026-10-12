@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 
 import storage
 from database import engine, get_db
-from models import GalaxyLike, GalaxyService
+from models import Galaxy, GalaxyLike
 
 app = FastAPI(title="Галактики: расстояние по сверхновым Ia")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -29,6 +29,7 @@ templates.env.globals.update(media_url=storage.media_url, is_video=storage.is_vi
 templates.env.globals["DEFAULT_VIDEO"] = storage.DEFAULT_VIDEO
 storage.init_storage()  # настройка MinIO при запуске
 
+
 def render(request, name, status_code=200, **context):
     return templates.TemplateResponse(request=request, name=name, context=context, status_code=status_code)
 
@@ -39,49 +40,61 @@ def not_found(request, message):
 
 def current_draft(db):
     return (
-        db.query(GalaxyService)
-        .filter(GalaxyService.creator_id == CURRENT_USER_ID, GalaxyService.status == "draft")
+        db.query(Galaxy)
+        .filter(Galaxy.creator_id == CURRENT_USER_ID, Galaxy.status == "draft")
         .first()
     )
 
 
+def start_page(request, status_code=200, error=None, title=""):
+    """Окно «Далее»: выбор названия, фото и видео."""
+    return render(
+        request, "add_start.html", status_code=status_code, active="add",
+        images=storage.list_images(), videos=storage.list_videos(),
+        default_image=storage.DEFAULT_IMAGE, default_video=storage.DEFAULT_VIDEO,
+        media_base=storage.MEDIA_BASE, error=error, title=title,
+    )
 
+
+# ------------------------------------------------------------------ ПЛИТКА
 @app.get("/", response_class=HTMLResponse)
 def grid(
     request: Request,
-    search: Optional[str] = None,
-    dist_min: Optional[float] = None,
-    dist_max: Optional[float] = None,
+    mag_min: Optional[float] = None,
+    mag_max: Optional[float] = None,
     db: Session = Depends(get_db),
 ):
-    published = db.query(GalaxyService).filter(GalaxyService.status == "published")
+    """Фильтрация по видимой звёздной величине: слайдеры «от» и «до» + кнопка «Найти»."""
+    low, high = (
+        db.query(func.min(Galaxy.apparent_magnitude), func.max(Galaxy.apparent_magnitude))
+        .filter(Galaxy.status == "published")
+        .one()
+    )
+    slider_min = math.floor(low) if low is not None else 0
+    slider_max = math.ceil(high) if high is not None else 20
 
-    # границы слайдера берём из данных
-    max_in_db = db.query(func.max(GalaxyService.distance_mpc)).filter(GalaxyService.status == "published").scalar()
-    slider_max = math.ceil(max_in_db or 50)
-
-    lo = 0.0 if dist_min is None else max(0.0, dist_min)
-    hi = float(slider_max) if dist_max is None else dist_max
+    lo = float(slider_min) if mag_min is None else mag_min
+    hi = float(slider_max) if mag_max is None else mag_max
     if lo > hi:
         lo, hi = hi, lo
 
-    query = published.options(selectinload(GalaxyService.likes))
-    if search:
-        query = query.filter(GalaxyService.title.ilike(f"%{search.strip()}%"))
-    query = query.filter(GalaxyService.distance_mpc.between(lo, hi))
-    items = query.order_by(GalaxyService.id).all()
-
+    items = (
+        db.query(Galaxy)
+        .options(selectinload(Galaxy.likes))
+        .filter(Galaxy.status == "published", Galaxy.apparent_magnitude.between(lo, hi))
+        .order_by(Galaxy.id)
+        .all()
+    )
     return render(
         request, "grid.html", active="grid", items=items,
-        search=search or "", dist_min=lo, dist_max=hi, slider_max=slider_max,
+        mag_min=lo, mag_max=hi, slider_min=slider_min, slider_max=slider_max,
     )
 
 
+# ------------------------------------------------------------------ ЛЕНТА
 @app.get("/feed")
 def feed_start(request: Request, db: Session = Depends(get_db)):
-    first = (
-        db.query(GalaxyService).filter(GalaxyService.status == "published").order_by(GalaxyService.id).first()
-    )
+    first = db.query(Galaxy).filter(Galaxy.status == "published").order_by(Galaxy.id).first()
     if not first:
         return render(request, "message.html", message="В ленте пока нет опубликованных галактик", active="feed")
     return RedirectResponse(url=f"/feed/{first.id}", status_code=303)
@@ -89,18 +102,14 @@ def feed_start(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/feed/{item_id}", response_class=HTMLResponse)
 def feed(request: Request, item_id: int, db: Session = Depends(get_db)):
-    item = (
-        db.query(GalaxyService)
-        .filter(GalaxyService.id == item_id, GalaxyService.status == "published")
-        .first()
-    )
+    item = db.query(Galaxy).filter(Galaxy.id == item_id, Galaxy.status == "published").first()
     if not item:
         return not_found(request, "Галактика удалена или не существует")
 
-    likes_count = db.query(GalaxyLike).filter(GalaxyLike.service_id == item.id).count()
+    likes_count = db.query(GalaxyLike).filter(GalaxyLike.galaxy_id == item.id).count()
     is_liked = (
         db.query(GalaxyLike)
-        .filter(GalaxyLike.service_id == item.id, GalaxyLike.user_id == CURRENT_USER_ID)
+        .filter(GalaxyLike.galaxy_id == item.id, GalaxyLike.user_id == CURRENT_USER_ID)
         .first()
         is not None
     )
@@ -109,10 +118,10 @@ def feed(request: Request, item_id: int, db: Session = Depends(get_db)):
 
 @app.get("/feed/{item_id}/next")
 def feed_next(item_id: int, db: Session = Depends(get_db)):
-    published = db.query(GalaxyService).filter(GalaxyService.status == "published")
-    nxt = published.filter(GalaxyService.id > item_id).order_by(GalaxyService.id).first()
+    published = db.query(Galaxy).filter(Galaxy.status == "published")
+    nxt = published.filter(Galaxy.id > item_id).order_by(Galaxy.id).first()
     if not nxt:  # дошли до конца — начинаем сначала
-        nxt = published.order_by(GalaxyService.id).first()
+        nxt = published.order_by(Galaxy.id).first()
     return RedirectResponse(url=f"/feed/{nxt.id}" if nxt else "/feed", status_code=303)
 
 
@@ -121,48 +130,48 @@ def toggle_like(item_id: int, db: Session = Depends(get_db)):
     """Лайк хранится в таблице galaxy_likes. Повторное нажатие снимает лайк."""
     like = (
         db.query(GalaxyLike)
-        .filter(GalaxyLike.service_id == item_id, GalaxyLike.user_id == CURRENT_USER_ID)
+        .filter(GalaxyLike.galaxy_id == item_id, GalaxyLike.user_id == CURRENT_USER_ID)
         .first()
     )
     if like:
         db.delete(like)
     else:
-        db.add(GalaxyLike(service_id=item_id, user_id=CURRENT_USER_ID))
+        db.add(GalaxyLike(galaxy_id=item_id, user_id=CURRENT_USER_ID))
     db.commit()
     return RedirectResponse(url=f"/feed/{item_id}", status_code=303)
 
 
-
+# ------------------------------------------------------------------ ДОБАВЛЕНИЕ
 @app.get("/add", response_class=HTMLResponse)
 def add_page(request: Request, db: Session = Depends(get_db)):
     draft = current_draft(db)
     if draft is None:
-        return render(
-            request, "add_start.html", active="add",
-            images=storage.list_images(), videos=storage.list_videos(),
-            default_image=storage.DEFAULT_IMAGE, default_video=storage.DEFAULT_VIDEO,
-            media_base=storage.MEDIA_BASE,
-        )
+        return start_page(request)  # черновика нет -> окно с кнопкой «Далее»
     return render(request, "add_form.html", active="add", draft=draft, form={}, error=None)
 
 
 @app.post("/add/next")
 def add_next(
+    request: Request,
+    title: str = Form(""),
     image_key: str = Form(storage.DEFAULT_IMAGE),
     video_key: str = Form(storage.DEFAULT_VIDEO),
     image_file: Optional[UploadFile] = File(None),
     video_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
 ):
-    """Кнопка «Далее»: создаёт черновик. Заполняются только фото, видео,
-    статус, автор и дата создания — остальные поля пока NULL."""
+    """Кнопка «Далее»: создаёт черновик. Заполняются название, фото, видео
+    и системные поля (статус, автор, даты). Остальные поля пока NULL."""
     if current_draft(db) is None:
+        if not title.strip():
+            return start_page(request, status_code=400, error="Введите название галактики")
         if image_file is not None and image_file.filename:
             image_key = storage.upload(image_file)
         if video_file is not None and video_file.filename:
             video_key = storage.upload(video_file)
 
-        db.add(GalaxyService(
+        db.add(Galaxy(
+            title=title.strip(),
             image_key=image_key or storage.DEFAULT_IMAGE,
             video_key=video_key or storage.DEFAULT_VIDEO,
             status="draft",
@@ -178,28 +187,28 @@ def add_next(
 @app.post("/add/publish")
 def add_publish(
     request: Request,
-    title: str = Form(""),
     supernova: str = Form(""),
-    magnitude: str = Form(""),
+    apparent_magnitude: str = Form(""),
     distance_mpc: str = Form(""),
     description: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    """Кнопка «Опубликовать»: сохраняет поля формы и меняет статус draft -> published."""
     draft = current_draft(db)
     if draft is None:
         return RedirectResponse(url="/add", status_code=303)
 
-    form = dict(title=title, supernova=supernova, magnitude=magnitude,
+    form = dict(supernova=supernova, apparent_magnitude=apparent_magnitude,
                 distance_mpc=distance_mpc, description=description)
     error = None
     try:
-        mag = float(magnitude.replace(",", "."))
+        mag = float(apparent_magnitude.replace(",", "."))
         dist = float(distance_mpc.replace(",", "."))
     except ValueError:
         mag = dist = None
-        error = "Видимая величина и расстояние должны быть числами"
-    if not title.strip() or not supernova.strip():
-        error = "Заполните название и обозначение сверхновой"
+        error = "Видимая звёздная величина и расстояние должны быть числами"
+    if not supernova.strip():
+        error = "Заполните обозначение сверхновой"
     elif dist is not None and dist <= 0:
         error = "Расстояние должно быть больше нуля"
 
@@ -207,9 +216,8 @@ def add_publish(
         return render(request, "add_form.html", status_code=400, active="add",
                       draft=draft, form=form, error=error)
 
-    draft.title = title.strip()
     draft.supernova = supernova.strip()
-    draft.magnitude = mag
+    draft.apparent_magnitude = mag
     draft.distance_mpc = dist
     draft.description = description.strip() or None
     draft.status = "published"
@@ -217,12 +225,12 @@ def add_publish(
     return RedirectResponse(url=f"/feed/{draft.id}", status_code=303)
 
 
-
+# ------------------------------------------------------------------ УДАЛЕНИЕ (SQL без ORM)
 @app.post("/delete/{item_id}")
-def delete_service(item_id: int, back: str = Form("/")):
+def delete_galaxy(item_id: int, back: str = Form("/")):
     with engine.begin() as conn:
         conn.execute(
-            text("UPDATE galaxy_services SET status = 'deleted' WHERE id = :id AND status <> 'deleted'"),
+            text("UPDATE galaxies SET status = 'deleted' WHERE id = :id AND status <> 'deleted'"),
             {"id": item_id},
         )
     return RedirectResponse(url=back if back in ("/", "/add") else "/", status_code=303)

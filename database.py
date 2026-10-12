@@ -8,7 +8,7 @@ DATABASE_URL = os.getenv(
     "postgresql+psycopg2://postgres:postgrespassword@localhost:5432/galaxy_db",
 )
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={"connect_timeout": 5})
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
 

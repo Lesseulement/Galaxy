@@ -5,18 +5,16 @@
   <h1 class="page-title">База галактик</h1>
 
   <form class="filters" action="/" method="get">
-    <input class="field" type="text" name="search" value="{{ search }}" placeholder="Поиск по названию галактики">
-
     <div class="range">
       <div class="range-head">
-        <span>Расстояние, Мпк</span>
-        <span class="range-values"><output id="minOut">{{ fmt(dist_min) }}</output> – <output id="maxOut">{{ fmt(dist_max) }}</output></span>
+        <span>Видимая звёздная величина, m</span>
+        <span class="range-values"><output id="minOut">{{ fmt(mag_min) }}</output> – <output id="maxOut">{{ fmt(mag_max) }}</output></span>
       </div>
       <label class="range-row">от
-        <input type="range" name="dist_min" id="distMin" min="0" max="{{ slider_max }}" step="0.5" value="{{ dist_min }}">
+        <input type="range" name="mag_min" id="magMin" min="{{ slider_min }}" max="{{ slider_max }}" step="0.1" value="{{ mag_min }}">
       </label>
       <label class="range-row">до
-        <input type="range" name="dist_max" id="distMax" min="0" max="{{ slider_max }}" step="0.5" value="{{ dist_max }}">
+        <input type="range" name="mag_max" id="magMax" min="{{ slider_min }}" max="{{ slider_max }}" step="0.1" value="{{ mag_max }}">
       </label>
     </div>
 
@@ -30,7 +28,7 @@
       <a class="tile-link" href="/feed/{{ item.id }}">
         {{ media(item.image_key, 'default.jpg', 'tile-img') }}
         <h2 class="tile-title">{{ item.title }}</h2>
-        <div class="tile-meta">{{ fmt(item.distance_mpc) }} Мпк</div>
+        <div class="tile-meta">m = {{ fmt(item.apparent_magnitude) }}, {{ fmt(item.distance_mpc) }} Мпк</div>
         <div class="tile-likes">{{ heart() }}<span>{{ item.likes | length }}</span></div>
       </a>
       <form action="/delete/{{ item.id }}" method="post">
@@ -48,7 +46,7 @@
 {% block scripts %}
 <script>
   // показываем значения слайдеров, пока их двигают
-  const minEl = document.getElementById('distMin'), maxEl = document.getElementById('distMax');
+  const minEl = document.getElementById('magMin'), maxEl = document.getElementById('magMax');
   const show = () => {
     document.getElementById('minOut').textContent = minEl.value;
     document.getElementById('maxOut').textContent = maxEl.value;

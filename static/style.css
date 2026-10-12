@@ -1,4 +1,4 @@
-
+/* Тёмные фоны — из макетов, акцентные цвета — палитра Zooniverse */
 :root {
   --page: #000000;
   --screen: #1e1e1e;
@@ -9,12 +9,12 @@
   --text: #ffffff;
   --muted: #b5b5b5;
 
-  --gold: #f0b200;       
-  --gold-dark: #cc9200;  
-  --teal: #00979d;       
-  --teal-dark: #005d69; 
-  --red: #e45950;        
-  --red-light: #ffb6aa; 
+  --gold: #f0b200;       /* кнопки */
+  --gold-dark: #cc9200;  /* кнопки при наведении */
+  --teal: #00979d;       /* фирменный бирюзовый */
+  --teal-dark: #005d69;  /* тёмный бирюзовый */
+  --red: #e45950;        /* сердечки */
+  --red-light: #ffb6aa;  /* текст ошибок */
   --radius: 10px;
 }
 
@@ -57,10 +57,11 @@ body {
 
 .page-title { font-size: 24px; font-weight: 700; margin-bottom: 16px; }
 .hint { color: var(--muted); font-size: 14px; margin-bottom: 16px; line-height: 1.35; }
+.draft-title { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
 .empty, .message p { color: var(--muted); text-align: center; margin-top: 40px; }
 .message { display: flex; flex-direction: column; gap: 20px; }
 
-/* ---------- кнопки: ОДИН стиль на всё приложение ---------- */
+/* ---------- кнопки: один стиль на всё приложение ---------- */
 .btn {
   display: block;
   width: 100%;
@@ -87,7 +88,7 @@ body {
 .group { display: flex; flex-direction: column; gap: 6px; }
 .label { color: var(--label); font-size: 14px; font-weight: 600; }
 .label em { font-weight: 400; color: var(--muted); }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
 
 .field {
   width: 100%;
@@ -118,12 +119,12 @@ textarea.field { resize: none; }
 .preview-media { width: 100%; height: 100%; object-fit: cover; display: block; }
 .screen > .group { margin-bottom: 14px; }
 
-/* ---------- сетка галактик ---------- */
+/* ---------- плитка ---------- */
 .filters { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 
 .range { background: var(--tile); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-.range-head { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; color: var(--label); }
-.range-values { color: var(--gold); }
+.range-head { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; color: var(--label); }
+.range-values { color: var(--gold); white-space: nowrap; }
 .range-row { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .range input[type="range"] { width: 100%; accent-color: var(--gold); }
 
