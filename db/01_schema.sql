@@ -1,8 +1,4 @@
--- =====================================================================
--- Схема БД «Галактики» (определение расстояния по сверхновым типа Ia).
--- Выполняется первой при создании контейнера postgres.
--- Данные — в отдельном скрипте db/02_insert.sql.
--- =====================================================================
+
 
 -- Статусы галактики: черновик, опубликована, удалена
 CREATE TYPE galaxy_status AS ENUM ('draft', 'published', 'deleted');
@@ -16,26 +12,19 @@ CREATE TABLE users (
     CONSTRAINT chk_username_not_blank CHECK (btrim(username) <> '')
 );
 
--- 2. Галактики (услуги)
 CREATE TABLE galaxies (
     id                 SERIAL        PRIMARY KEY,
-
-    -- Заполняются кнопкой «Далее» (POST) — обязательные
     title              VARCHAR(100)  NOT NULL,
-    image_key          VARCHAR(255)  NOT NULL DEFAULT 'default.jpg',  -- имя файла фото в MinIO
-    video_key          VARCHAR(255)  NOT NULL DEFAULT 'default.mp4',  -- имя файла видео в MinIO
-
-    -- Системные поля — вычисляются на сервере, с клиента не принимаются
+    image_key          VARCHAR(255)  NOT NULL DEFAULT 'default.jpg', 
+    video_key          VARCHAR(255)  NOT NULL DEFAULT 'default.mp4',  
     status             galaxy_status NOT NULL DEFAULT 'draft',
     creator_id         INT           NOT NULL,
-    created_at         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- дата создания
-    updated_at         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- дата обновления
-
-    -- Заполняются кнопкой «Опубликовать» (PUT) — пустые, пока запись черновик
-    supernova          VARCHAR(30),       -- обозначение сверхновой Ia, напр. SN 2014J
-    apparent_magnitude NUMERIC(5,2),      -- видимая звёздная величина сверхновой, m
-    distance_mpc       NUMERIC(8,2),      -- расстояние до галактики, Мпк
-    description        TEXT,              -- описание (необязательное)
+    created_at         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,  
+    updated_at         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+    supernova          VARCHAR(30),       
+    apparent_magnitude NUMERIC(5,2),      
+    distance_mpc       NUMERIC(8,2),      
+    description        TEXT,              
 
     CONSTRAINT fk_galaxies_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE RESTRICT,
     CONSTRAINT chk_title_not_blank CHECK (btrim(title) <> ''),
@@ -47,10 +36,7 @@ CREATE TABLE galaxies (
     )
 );
 
--- У пользователя не больше одного черновика
-CREATE UNIQUE INDEX uq_galaxies_one_draft ON galaxies (creator_id) WHERE status = 'draft';
-
--- Дата обновления проставляется автоматически при любом UPDATE
+CREATE UNIQUE INDEX uq_galaxies_one_draft ON galaxies (creator_id) WHERE status <> 'published';
 CREATE FUNCTION set_updated_at() RETURNS trigger AS $$
 BEGIN
     NEW.updated_at := CURRENT_TIMESTAMP;
