@@ -31,12 +31,12 @@ CREATE TABLE galaxies (
     CONSTRAINT chk_distance_positive CHECK (distance_mpc IS NULL OR distance_mpc > 0),
     -- опубликовать можно только заполненную галактику
     CONSTRAINT chk_published_filled CHECK (
-        status = 'draft'
+        status <> 'published'
         OR (supernova IS NOT NULL AND apparent_magnitude IS NOT NULL AND distance_mpc IS NOT NULL)
     )
 );
 
-CREATE UNIQUE INDEX uq_galaxies_one_draft ON galaxies (creator_id) WHERE status <> 'published';
+CREATE UNIQUE INDEX uq_galaxies_one_draft ON galaxies (creator_id) WHERE status = 'draft';
 CREATE FUNCTION set_updated_at() RETURNS trigger AS $$
 BEGIN
     NEW.updated_at := CURRENT_TIMESTAMP;
