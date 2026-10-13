@@ -30,7 +30,6 @@ class Galaxy(Base):
     image_key = Column(String(255), nullable=False, server_default="default.jpg")
     video_key = Column(String(255), nullable=False, server_default="default.mp4")
 
-    # системные поля
     status = Column(GalaxyStatus, nullable=False, server_default="draft")
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -38,8 +37,8 @@ class Galaxy(Base):
 
     # кнопка «Опубликовать» (PUT)
     supernova = Column(String(30))
-    apparent_magnitude = Column(Numeric(5, 2, asdecimal=False))  # видимая звёздная величина, m
-    distance_mpc = Column(Numeric(8, 2, asdecimal=False))        # расстояние, Мпк
+    apparent_magnitude = Column(Numeric(5, 2, asdecimal=False)) 
+    distance_mpc = Column(Numeric(8, 2, asdecimal=False))       
     description = Column(Text)
 
     creator = relationship("User", back_populates="galaxies")

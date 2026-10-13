@@ -90,7 +90,7 @@ def read_draft(db: Session = Depends(get_db), uid: int = Depends(current_user_id
     return to_out(draft, uid)
 
 
-# 4. Кнопка «Далее»: создаёт черновик — название, фото и видео (файлы в MinIO)
+
 @router.post("", response_model=GalaxyOut, status_code=201)
 def create_draft(
     title: str = Form(..., min_length=1, max_length=100),
@@ -100,7 +100,7 @@ def create_draft(
     uid: int = Depends(current_user_id),
 ):
     if get_draft(db, uid) is not None:
-        raise HTTPException(status_code=409)  # черновик уже есть
+        raise HTTPException(status_code=409)  
     if not title.strip():
         raise HTTPException(status_code=400)
     if not (image.content_type or "").startswith("image/"):
@@ -121,7 +121,6 @@ def create_draft(
     return to_out(draft, uid)
 
 
-# 5. Кнопка «Опубликовать»: сохраняет поля формы и меняет статус draft -> published
 @router.put("/draft/publish", response_model=GalaxyOut)
 def publish_draft(body: PublishIn, db: Session = Depends(get_db), uid: int = Depends(current_user_id)):
     draft = get_draft(db, uid)
@@ -131,13 +130,12 @@ def publish_draft(body: PublishIn, db: Session = Depends(get_db), uid: int = Dep
     draft.apparent_magnitude = body.apparent_magnitude
     draft.distance_mpc = body.distance_mpc
     draft.description = (body.description or "").strip() or None
-    draft.status = "published"  # обратно в черновик вернуть нельзя
+    draft.status = "published"  
     db.commit()
     db.refresh(draft)
     return to_out(draft, uid)
 
 
-# 6. Кнопки «Удалить» (плитка) и «Удалить черновик»: мягкое удаление, только свои
 @router.delete("/{galaxy_id}")
 def delete_galaxy(galaxy_id: int, db: Session = Depends(get_db), uid: int = Depends(current_user_id)):
     galaxy = db.query(Galaxy).filter(Galaxy.id == galaxy_id, Galaxy.status != "deleted").first()
