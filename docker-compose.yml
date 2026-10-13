@@ -28,6 +28,12 @@ services:
       - ./db/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./db/02_insert.sql:/docker-entrypoint-initdb.d/02_insert.sql:ro
 
+  redis:
+    image: redis:7
+    container_name: galaxy_redis
+    ports:
+      - "6379:6379"   # хранилище сессий
+
   adminer:
     image: adminer
     container_name: galaxy_adminer

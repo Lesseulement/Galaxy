@@ -1,81 +1,104 @@
-# ЛР3. Веб-сервис «Галактики»
+# ЛР4. Веб-сервис «Галактики»: авторизация и Swagger
 
 Определение расстояния до галактик по сверхновым типа Ia.
-**Услуги** — галактики. **Заявка** (следующие лабораторные) — расчёт расстояния до выбранных галактик
+**Услуги** — галактики. **Заявка** — расчёт расстояния до выбранных галактик
 по видимой звёздной величине сверхновой.
 
-Стек: FastAPI, PostgreSQL + SQLAlchemy (ORM), MinIO (фото и видео), Docker Compose.
-Шаблонов нет: сервис отдаёт только JSON и коды ответа HTTP. Тестирование — Postman
-(коллекция `Galaxy.postman_collection.json`, 10 запросов — по одному на метод).
+Стек: FastAPI, PostgreSQL + SQLAlchemy (ORM), MinIO (фото и видео), **Redis (сессии)**, Docker Compose.
+Документация методов — Swagger: `http://127.0.0.1:8001/docs`.
 
 ## Запуск
 
 ```bash
 docker compose down -v      # пересоздать БД по db/01_schema.sql и db/02_insert.sql
-docker compose up -d
+docker compose up -d        # minio, db, redis, adminer
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8001
 ```
 
-Базовый адрес API: `http://127.0.0.1:8001/api`
+| Что | Адрес |
+|---|---|
+| API | http://127.0.0.1:8001/api |
+| Swagger | http://127.0.0.1:8001/docs |
+| MinIO | http://localhost:9001 (admin / password123) |
+| Adminer | http://localhost:8081 (сервер `db`, postgres / postgrespassword, БД galaxy_db) |
+| Redis | `docker exec -it galaxy_redis redis-cli` |
+
+Тестовый пользователь: `veronika` / `password123`.
+
+## Авторизация (сессии и куки)
+
+1. `POST /api/users/login` с `{"username", "password"}` проверяет пароль по хэшу из БД.
+2. Сервер создаёт сессию в Redis: ключ `session:<id>`, значение `{"user_id", "username"}`, срок жизни 24 часа.
+3. В ответе кука `session_id=<id>` (HttpOnly, SameSite=Lax). Браузер, Swagger и Postman дальше отправляют её сами.
+4. В каждом методе пользователь берётся из сессии по куке (`deps.py`):
+   `current_user` — для методов создателя, без сессии **401**;
+   `current_user_optional` — для чтения, гость получает `null` (`is_liked = 0`, `is_mine = 0`).
+5. При создании галактики `creator_id` заполняется автоматически из сессии.
+6. `POST /api/users/logout` удаляет сессию из Redis и куку.
+
+Посмотреть сессии в Redis:
+
+```
+docker exec -it galaxy_redis redis-cli
+KEYS *
+GET session:<id>
+TTL session:<id>
+```
 
 ## Структура
 
 | Файл | Назначение |
 |---|---|
-| `main.py` | приложение, подключение роутеров, ошибки — только кодом ответа |
+| `main.py` | приложение, описание для Swagger, ошибки — только кодом ответа |
 | `routers/galaxies.py` | домен «Галактики» — 7 методов |
-| `routers/users.py` | домен «Пользователи» — 3 метода |
+| `routers/users.py` | домен «Пользователи» — 3 метода (регистрация, вход, выход) |
+| `sessions.py` | сессии в Redis: создать, получить, удалить |
+| `deps.py` | текущий пользователь по куке сессии |
 | `models.py` | ORM-модели `User`, `Galaxy`, `GalaxyLike` |
 | `schemas.py` | сериализаторы запросов и ответов |
-| `deps.py` | функция-singleton текущего пользователя |
 | `storage.py` | работа с MinIO |
 | `database.py` | подключение к PostgreSQL |
 | `db/01_schema.sql` | таблицы, ограничения, триггер даты обновления |
 | `db/02_insert.sql` | начальные данные (скрипт insert) |
 
-## Текущий пользователь
-
-Авторизация появится в ЛР4. Пока создатель во всех методах зафиксирован константой
-`CREATOR_ID = 1` через функцию-singleton `current_user_id()` в `deps.py`.
-Методы получают пользователя через `Depends(current_user_id)`.
-
 ## Кнопки интерфейса и методы
 
-| Страница | Кнопка / действие | Метод | Какие поля передаются |
+| Страница | Кнопка / действие | Метод | Доступ |
 |---|---|---|---|
-| Плитка | «Найти» (слайдер видимой величины) | `GET /api/galaxies` | `magnitude_from`, `magnitude_to` |
-| Плитка | «Удалить» | `DELETE /api/galaxies/{id}` | — |
-| Лента | открыть ленту / стрелка «следующая» | `GET /api/galaxies/feed` | `id`, `next` |
-| Лента | сердечко | `POST /api/galaxies/{id}/like` | `like` (0/1) |
-| Регистрация сверхновой | «Далее» | `POST /api/galaxies` | `title`, файл `image`, файл `video` |
-| Регистрация сверхновой | открытие формы черновика | `GET /api/galaxies/draft` | — |
-| Регистрация сверхновой | «Опубликовать» | `PUT /api/galaxies/draft/publish` | `supernova`, `apparent_magnitude`, `distance_mpc`, `description` |
-| Регистрация сверхновой | «Удалить черновик» | `DELETE /api/galaxies/{id}` | — |
-| Регистрация пользователя | «Зарегистрироваться» | `POST /api/users/register` | `username`, `password` |
-| Регистрация пользователя | «Войти» / «Выйти» | `POST /api/users/login`, `POST /api/users/logout` | заглушки до ЛР4 |
+| Плитка | «Найти» (слайдер видимой величины) | `GET /api/galaxies` | гость и создатель |
+| Плитка | «Удалить» | `DELETE /api/galaxies/{id}` | создатель |
+| Лента | открыть ленту / стрелка «следующая» | `GET /api/galaxies/feed` | гость и создатель |
+| Лента | сердечко | `POST /api/galaxies/{id}/like` | создатель |
+| Регистрация сверхновой | «Далее» | `POST /api/galaxies` | создатель |
+| Регистрация сверхновой | открытие формы черновика | `GET /api/galaxies/draft` | создатель |
+| Регистрация сверхновой | «Опубликовать» | `PUT /api/galaxies/draft/publish` | создатель |
+| Регистрация сверхновой | «Удалить черновик» | `DELETE /api/galaxies/{id}` | создатель |
+| Вход | «Зарегистрироваться» | `POST /api/users/register` | гость |
+| Вход | «Войти» | `POST /api/users/login` | гость |
+| Меню | «Выйти» | `POST /api/users/logout` | создатель |
 
 ## HTTP-методы (10)
 
 ### Домен «Галактики» — `/api/galaxies`
 
-| № | Метод | URL | Описание | Тело запроса | Ответ |
-|---|---|---|---|---|---|
-| 1 | GET | `/api/galaxies` | список опубликованных галактик с фильтрацией по видимой звёздной величине | — (параметры `magnitude_from`, `magnitude_to`, необяз. `title`) | 200, массив галактик |
-| 2 | GET | `/api/galaxies/feed` | лента: без `id` — первая галактика; `?id=N` — эта; `?id=N&next=true` — следующая | — (параметры `id`, `next`) | 200, галактика; 404 |
-| 3 | GET | `/api/galaxies/draft` | поля черновика текущего пользователя (не больше одного), id не указывается | — | 200, галактика; 404 |
-| 4 | POST | `/api/galaxies` | **кнопка «Далее»**: создаёт черновик, файлы фото и видео сохраняются в MinIO | form-data: `title`, `image` (файл), `video` (файл) | 201, галактика; 400; 409 — черновик уже есть |
-| 5 | PUT | `/api/galaxies/draft/publish` | **кнопка «Опубликовать»**: сохраняет поля формы и меняет статус `draft` → `published` | JSON: `supernova`, `apparent_magnitude`, `distance_mpc`, `description` (необяз.) | 200, галактика; 400; 404 |
-| 6 | DELETE | `/api/galaxies/{id}` | мягкое удаление (статус `deleted`), только свои галактики | — | 200; 403 — чужая; 404 |
-| 7 | POST | `/api/galaxies/{id}/like` | лайк текущего пользователя | JSON `{"like": 1}` — поставить, `{"like": 0}` — отменить | 200, `{"likes_count", "is_liked"}`; 404 |
+| № | Метод | URL | Описание | Доступ | Тело / параметры | Ответ |
+|---|---|---|---|---|---|---|
+| 1 | GET | `/api/galaxies` | список опубликованных галактик, фильтр по видимой звёздной величине | все | `magnitude_from`, `magnitude_to`, необяз. `title` | 200, массив |
+| 2 | GET | `/api/galaxies/feed` | лента: без `id` — первая; `?id=N` — эта; `?id=N&next=true` — следующая | все | `id`, `next` | 200; 404 |
+| 3 | GET | `/api/galaxies/draft` | поля черновика текущего пользователя | вход | — | 200; 401; 404 |
+| 4 | POST | `/api/galaxies` | **«Далее»**: создать черновик, файлы в MinIO, создатель из сессии | вход | form-data: `title`, `image`, `video` | 201; 400; 401; 409 |
+| 5 | PUT | `/api/galaxies/draft/publish` | **«Опубликовать»**: поля формы, статус `draft` → `published` | вход | JSON: `supernova`, `apparent_magnitude`, `distance_mpc`, `description` | 200; 400; 401; 404 |
+| 6 | DELETE | `/api/galaxies/{id}` | мягкое удаление (статус `deleted`), только свои | вход | — | 200; 401; 403; 404 |
+| 7 | POST | `/api/galaxies/{id}/like` | лайк текущего пользователя | вход | JSON `{"like": 1}` / `{"like": 0}` | 200; 401; 404 |
 
 ### Домен «Пользователи» — `/api/users`
 
-| № | Метод | URL | Описание | Тело запроса | Ответ |
-|---|---|---|---|---|---|
-| 8 | POST | `/api/users/register` | регистрация | JSON `{"username", "password"}` | 201, `{"id", "username"}`; 409 — логин занят |
-| 9 | POST | `/api/users/login` | аутентификация (заглушка до ЛР4) | — | 200 |
-| 10 | POST | `/api/users/logout` | деавторизация (заглушка до ЛР4) | — | 200 |
+| № | Метод | URL | Описание | Доступ | Тело | Ответ |
+|---|---|---|---|---|---|---|
+| 8 | POST | `/api/users/register` | регистрация, пароль хранится хэшем | все | JSON `{"username", "password"}` | 201; 400; 409 |
+| 9 | POST | `/api/users/login` | аутентификация: сессия в Redis + кука `session_id` | все | JSON `{"username", "password"}` | 200 `{"id", "username"}`; 401 |
+| 10 | POST | `/api/users/logout` | деавторизация: удаление сессии и куки | вход | — | 200; 401 |
 
 ### Ответ по галактике
 
@@ -103,7 +126,7 @@ uvicorn main:app --reload --port 8001
 ### Коды ответа
 
 Ошибки возвращаются только кодом, без текста в теле: 200/201 — успешно, 400 — неверные данные,
-403 — нет прав, 404 — не найдено, 409 — конфликт (черновик уже есть, логин занят).
+401 — не выполнен вход, 403 — нет прав (чужая галактика), 404 — не найдено, 409 — конфликт (черновик уже есть, логин занят).
 
 ## Таблицы БД
 

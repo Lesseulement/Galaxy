@@ -1,5 +1,5 @@
-"""ЛР3: веб-сервис (REST API) приложения «Галактики».
-Шаблонов нет: сервис отдаёт только JSON и коды ответа HTTP. 10 методов."""
+"""ЛР4: веб-сервис «Галактики» с авторизацией через сессии (Redis) и куки.
+Swagger: http://127.0.0.1:8001/docs"""
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
@@ -8,7 +8,25 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import storage
 from routers import galaxies, users
 
-app = FastAPI(title="Galaxy API", description="Определение расстояния до галактик по сверхновым типа Ia")
+DESCRIPTION = """
+Определение расстояния до галактик по сверхновым типа Ia.
+
+**Авторизация** — через сессию: метод `POST /api/users/login` создаёт сессию в Redis
+и возвращает куку `session_id`. Браузер и Swagger дальше отправляют куку сами.
+
+* без входа (гость) — только чтение: список галактик и лента;
+* после входа (создатель) — черновик, «Далее», «Опубликовать», «Удалить», лайк, выход.
+
+Методы с замком 🔒 требуют входа, без куки сессии возвращают **401**.
+Ошибки возвращаются только кодом ответа, тело пустое.
+"""
+
+TAGS = [
+    {"name": "Галактики", "description": "Услуги: галактики со сверхновыми типа Ia (7 методов)"},
+    {"name": "Пользователи", "description": "Регистрация, вход и выход (3 метода)"},
+]
+
+app = FastAPI(title="Galaxy API", version="4.0", description=DESCRIPTION, openapi_tags=TAGS)
 
 
 # Ошибки отдаём только кодом ответа, без текста в теле
