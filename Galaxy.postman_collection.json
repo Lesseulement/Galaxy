@@ -1,13 +1,18 @@
 {
   "info": {
     "name": "Galaxy API (ЛР4)",
-    "description": "10 методов веб-сервиса «Галактики». Авторизация: запрос 9 «Вход» — Postman сам сохранит куку session_id и будет отправлять её в остальных запросах. Без куки методы создателя возвращают 401.",
+    "description": "10 методов веб-сервиса «Галактики». Во всех запросах включён заголовок Cookie: session_id={{session_id}}. Значение session_id берётся из браузера (DevTools → Application → Cookies) после входа через Swagger и вставляется в переменную коллекции session_id. Пустое значение — гость (методы создателя вернут 401).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "http://127.0.0.1:8001/api"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "description": "значение куки session_id из браузера (DevTools → Application → Cookies)"
     }
   ],
   "item": [
@@ -37,7 +42,15 @@
                 }
               ]
             },
-            "description": "Страница «Плитка», кнопка «Найти». Только опубликованные. Параметры: magnitude_from, magnitude_to (видимая звёздная величина), title (необязательно)."
+            "description": "Страница «Плитка», кнопка «Найти». Только опубликованные. Параметры: magnitude_from, magnitude_to (видимая звёздная величина), title (необязательно).",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              }
+            ]
           }
         },
         {
@@ -73,7 +86,15 @@
                   "src": []
                 }
               ]
-            }
+            },
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              }
+            ]
           }
         },
         {
@@ -90,7 +111,15 @@
                 "draft"
               ]
             },
-            "description": "Страница «Регистрация сверхновой», шаг 2: при открытии формы. id не указывается. 404 — черновика нет. Требуется вход (кука session_id), иначе 401."
+            "description": "Страница «Регистрация сверхновой», шаг 2: при открытии формы. id не указывается. 404 — черновика нет. Требуется вход (кука session_id), иначе 401.",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              }
+            ]
           }
         },
         {
@@ -110,6 +139,12 @@
             },
             "description": "Сохраняет введённые поля и меняет статус draft -> published. 400 — не заполнены поля; 404 — нет черновика. Требуется вход (кука session_id), иначе 401.",
             "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -150,7 +185,15 @@
                 }
               ]
             },
-            "description": "Страница «Лента». Чтобы получить ленту без id, снимите галочки с параметров id и next."
+            "description": "Страница «Лента». Чтобы получить ленту без id, снимите галочки с параметров id и next.",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              }
+            ]
           }
         },
         {
@@ -170,6 +213,12 @@
             },
             "description": "Страница «Лента», сердечко. Лайк от текущего пользователя. Требуется вход (кука session_id), иначе 401.",
             "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -200,7 +249,15 @@
                 "3"
               ]
             },
-            "description": "Плитка — «Удалить», Добавление — «Удалить черновик». Только свои: 403 для чужой (например, id 5). Требуется вход (кука session_id), иначе 401."
+            "description": "Плитка — «Удалить», Добавление — «Удалить черновик». Только свои: 403 для чужой (например, id 5). Требуется вход (кука session_id), иначе 401.",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              }
+            ]
           }
         }
       ]
@@ -224,6 +281,12 @@
             },
             "description": "201; 409 — логин занят.",
             "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -257,6 +320,12 @@
             "description": "Проверяет логин и пароль, создаёт сессию в Redis, в ответе кука session_id. 401 — неверный логин или пароль.",
             "header": [
               {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -286,7 +355,15 @@
                 "logout"
               ]
             },
-            "description": "Удаляет сессию из Redis и куку. Без входа — 401."
+            "description": "Удаляет сессию из Redis и куку. Без входа — 401.",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "type": "text",
+                "description": "кука сессии из браузера"
+              }
+            ]
           }
         }
       ]

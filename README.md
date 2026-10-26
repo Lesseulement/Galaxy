@@ -37,7 +37,18 @@ uvicorn main:app --reload --port 8001
 5. При создании галактики `creator_id` заполняется автоматически из сессии.
 6. `POST /api/users/logout` удаляет сессию из Redis и куку.
 
-Посмотреть сессии в Redis:
+Postman: во **всех** запросах коллекции включён заголовок `Cookie: session_id={{session_id}}`.
+Значение куки копируется из браузера (DevTools → Application → Cookies) и вставляется в переменную
+коллекции `session_id`. Пустое значение — гость: список и лента работают, методы создателя дают 401.
+
+Lua-скрипт `redis/sessions.lua` выводит все сессии: ключ, пользователя сессии и оставшийся TTL.
+Папка `redis` подключена в контейнер как `/scripts`:
+
+```
+docker exec -it galaxy_redis redis-cli --eval /scripts/sessions.lua
+```
+
+Посмотреть сессии в Redis вручную:
 
 ```
 docker exec -it galaxy_redis redis-cli
@@ -58,6 +69,7 @@ TTL session:<id>
 | `models.py` | ORM-модели `User`, `Galaxy`, `GalaxyLike` |
 | `schemas.py` | сериализаторы запросов и ответов |
 | `storage.py` | работа с MinIO |
+| `redis/sessions.lua` | Lua-скрипт: все сессии и их пользователи |
 | `database.py` | подключение к PostgreSQL |
 | `db/01_schema.sql` | таблицы, ограничения, триггер даты обновления |
 | `db/02_insert.sql` | начальные данные (скрипт insert) |
