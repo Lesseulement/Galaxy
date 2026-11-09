@@ -1,20 +1,9 @@
 {
   "info": {
     "name": "Galaxy API (ЛР4)",
-    "description": "10 методов веб-сервиса «Галактики». Во всех запросах включён заголовок Cookie: session_id={{session_id}}. Значение session_id берётся из браузера (DevTools → Application → Cookies) после входа через Swagger и вставляется в переменную коллекции session_id. Пустое значение — гость (методы создателя вернут 401).",
+    "description": "10 методов веб-сервиса «Галактики». Во всех запросах адрес записан полностью (http://127.0.0.1:8001/api/...) и включён заголовок Cookie со значением куки session_id из браузера. Перед импортом замените в файле jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo на значение куки (DevTools → Application → Cookies). Для запросов гостя значение удаляется: Cookie: session_id=",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://127.0.0.1:8001/api"
-    },
-    {
-      "key": "session_id",
-      "value": "",
-      "description": "значение куки session_id из браузера (DevTools → Application → Cookies)"
-    }
-  ],
   "item": [
     {
       "name": "Галактики",
@@ -24,11 +13,15 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/galaxies?magnitude_from=11&magnitude_to=13",
+              "raw": "http://127.0.0.1:8001/api/galaxies?magnitude_from=11&magnitude_to=13",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies"
               ],
               "query": [
@@ -40,15 +33,16 @@
                   "key": "magnitude_to",
                   "value": "13"
                 }
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Страница «Плитка», кнопка «Найти». Только опубликованные. Параметры: magnitude_from, magnitude_to (видимая звёздная величина), title (необязательно).",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               }
             ]
           }
@@ -58,13 +52,19 @@
           "request": {
             "method": "POST",
             "url": {
-              "raw": "{{baseUrl}}/galaxies",
+              "raw": "http://127.0.0.1:8001/api/galaxies",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Страница «Регистрация сверхновой», шаг 1. Создаёт черновик. Файлы сохраняются в MinIO под латинскими именами. 201; 409 — черновик уже есть. Требуется вход (кука session_id), иначе 401.",
             "body": {
@@ -90,9 +90,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               }
             ]
           }
@@ -102,22 +101,27 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/galaxies/draft",
+              "raw": "http://127.0.0.1:8001/api/galaxies/draft",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies",
                 "draft"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Страница «Регистрация сверхновой», шаг 2: при открытии формы. id не указывается. 404 — черновика нет. Требуется вход (кука session_id), иначе 401.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               }
             ]
           }
@@ -127,23 +131,28 @@
           "request": {
             "method": "PUT",
             "url": {
-              "raw": "{{baseUrl}}/galaxies/draft/publish",
+              "raw": "http://127.0.0.1:8001/api/galaxies/draft/publish",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies",
                 "draft",
                 "publish"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Сохраняет введённые поля и меняет статус draft -> published. 400 — не заполнены поля; 404 — нет черновика. Требуется вход (кука session_id), иначе 401.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -166,11 +175,15 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/galaxies/feed?id=1&next=true",
+              "raw": "http://127.0.0.1:8001/api/galaxies/feed?id=1&next=true",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies",
                 "feed"
               ],
@@ -183,15 +196,16 @@
                   "key": "next",
                   "value": "true"
                 }
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Страница «Лента». Чтобы получить ленту без id, снимите галочки с параметров id и next.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               }
             ]
           }
@@ -201,23 +215,28 @@
           "request": {
             "method": "POST",
             "url": {
-              "raw": "{{baseUrl}}/galaxies/2/like",
+              "raw": "http://127.0.0.1:8001/api/galaxies/2/like",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies",
                 "2",
                 "like"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Страница «Лента», сердечко. Лайк от текущего пользователя. Требуется вход (кука session_id), иначе 401.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -240,22 +259,27 @@
           "request": {
             "method": "DELETE",
             "url": {
-              "raw": "{{baseUrl}}/galaxies/3",
+              "raw": "http://127.0.0.1:8001/api/galaxies/3",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "galaxies",
                 "3"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Плитка — «Удалить», Добавление — «Удалить черновик». Только свои: 403 для чужой (например, id 5). Требуется вход (кука session_id), иначе 401.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               }
             ]
           }
@@ -270,22 +294,27 @@
           "request": {
             "method": "POST",
             "url": {
-              "raw": "{{baseUrl}}/users/register",
+              "raw": "http://127.0.0.1:8001/api/users/register",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "users",
                 "register"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "201; 409 — логин занят.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -308,22 +337,27 @@
           "request": {
             "method": "POST",
             "url": {
-              "raw": "{{baseUrl}}/users/login",
+              "raw": "http://127.0.0.1:8001/api/users/login",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "users",
                 "login"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Проверяет логин и пароль, создаёт сессию в Redis, в ответе кука session_id. 401 — неверный логин или пароль.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               },
               {
                 "key": "Content-Type",
@@ -346,22 +380,27 @@
           "request": {
             "method": "POST",
             "url": {
-              "raw": "{{baseUrl}}/users/logout",
+              "raw": "http://127.0.0.1:8001/api/users/logout",
               "host": [
-                "{{baseUrl}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
               "path": [
+                "api",
                 "users",
                 "logout"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8001"
             },
             "description": "Удаляет сессию из Redis и куку. Без входа — 401.",
             "header": [
               {
                 "key": "Cookie",
-                "value": "session_id={{session_id}}",
-                "type": "text",
-                "description": "кука сессии из браузера"
+                "value": "session_id=jbdJl_oOSIRmuO2oIi06HgHuevGo9X6Xg6DDK9c3leo",
+                "type": "text"
               }
             ]
           }
