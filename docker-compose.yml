@@ -1,7 +1,8 @@
 services:
 
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
+    user: root
     container_name: minio_galaxies
     ports:
       - "9000:9000"   # API (отсюда клиент берёт картинки)
